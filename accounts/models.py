@@ -5,3 +5,4 @@ from django.contrib.auth.models import AbstractUser
 class CustomUser(AbstractUser):
     bio=models.TextField(max_length=500,default="")
     profile_pic = models.ImageField(default="",upload_to ="profile_pics")
+    

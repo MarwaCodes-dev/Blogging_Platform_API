@@ -4,8 +4,9 @@ from .serializers import UserRegistrationSerializer,UserLoginSerializer, UserSer
 from .models import CustomUser
 from rest_framework.exceptions import NotFound 
 from rest_framework.response import Response
-from rest_framework import status
 from rest_framework.permissions import AllowAny , IsAdminUser , IsAuthenticated
+from django.contrib.auth import logout
+from rest_framework.authentication import TokenAuthentication
 # Create your views here.
 
 # The `UserRegistrationView` class is an API view in Python that handles user registration requests
@@ -40,20 +41,38 @@ class UserListView(APIView):
     
 # This class is an API view for updating user profile information with authentication and error
 # handling.
+
+class UserLogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
     
+    def post(self, request, *args, **kwargs):
+        # Delete the user's auth token
+        request.user.auth_token.delete()
+        
+        # Update user's is_active status
+        user = request.user
+        user.save()
+        
+        # Perform Django logout
+        logout(request)
+        
+        return Response({"detail": "Successfully logged out."}, status=200)    
 class UserProfileUpdateView(APIView):
     permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
     
     def get_object(self, user_id):
         try:
             return CustomUser.objects.get(id=user_id)
         except CustomUser.DoesNotExist:
             raise NotFound("User not found")
+
     def put(self, request, *args, **kwargs):
-        user = request.user
-        serializer = UserSerializer(user, partial=True, data=request.data)
+        serializer = UserSerializer(request.user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=200)
-        return Response(serializer.errors, status=400)
+        return Response(serializer.errors, status=400)   
+     
        
